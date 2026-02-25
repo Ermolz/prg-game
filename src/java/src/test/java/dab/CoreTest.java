@@ -66,7 +66,7 @@ class CoreTest {
         )) {
             s = Core.applyMove(s, e).newState();
         }
-        assertEquals(2, s.player()); // player 2 closed the box → extra turn, same player
+        assertEquals(2, s.player());
     }
 
     @Test

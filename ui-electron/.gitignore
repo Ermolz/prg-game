@@ -1,0 +1,18 @@
+# Dependencies & build
+node_modules/
+out-electron/
+dist-renderer/
+release/
+*.tsbuildinfo
+
+# CLI binary (publish puts here; or copy manually)
+resources/cli/
+
+# Logs & env
+*.log
+electron-main-debug.txt
+.env
+.env.local
+
+# OS
+.DS_Store

@@ -57,7 +57,7 @@ def test_extra_turn_player_unchanged():
     s = initial_state(1, 1)
     for e in [((0, 0), (1, 0)), ((0, 0), (0, 1)), ((1, 0), (1, 1)), ((0, 1), (1, 1))]:
         s, _, _ = apply_move(s, e)
-    assert s.player == 2  # player 2 closed the box → extra turn, same player
+    assert s.player == 2
 
 
 def test_no_close_player_changes():
