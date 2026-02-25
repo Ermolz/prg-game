@@ -1,0 +1,77 @@
+# === SWI-Prolog ===
+*.qlf
+*.pl~
+*.prolog
+
+# === Python ===
+__pycache__/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+*.py[cod]
+*$py.class
+*.pyo
+venv/
+.venv/
+env/
+.env/
+*.egg-info/
+.eggs/
+dist/
+*.egg
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# === Java / Gradle ===
+.gradle/
+build/
+*.class
+*.jar
+*.war
+*.log
+
+# === C# / .NET ===
+bin/
+obj/
+[Dd]ebug/
+[Rr]elease/
+[Bb]uild/
+*.user
+*.suo
+*.userosscache
+.vs/
+packages/
+*.nupkg
+[Tt]est[Rr]esult*/
+[Cc]overage/
+*.trx
+*.coverage
+*.coveragexml
+
+# === IDE / editors ===
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+*.swp
+*.swo
+*~
+.classpath
+.project
+.settings/
+
+# === OS ===
+.DS_Store
+Thumbs.db
+Desktop.ini
+
+# === Misc ===
+*.tmp
+*.bak
+*.log
+.env
+.env.local
+*.local

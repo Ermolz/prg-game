@@ -1,0 +1,7 @@
+// One-time: generate gradle-wrapper.jar (gradlew/gradlew.bat already in repo).
+// From project root (game/):  cd src/java && gradle -b wrapper.gradle wrapper --gradle-version 9.3.1
+// Then use only:  make java-tests  or  bash ./gradlew test
+
+task wrapper(type: Wrapper) {
+    gradleVersion = '9.3.1'
+}

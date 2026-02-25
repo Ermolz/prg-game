@@ -1,0 +1,12 @@
+# Pytest (if run from tests/)
+.pytest_cache/
+__pycache__/
+*.pyc
+
+# Coverage
+htmlcov/
+.coverage
+coverage.xml
+
+# Prolog test artifacts (if any)
+*.qlf

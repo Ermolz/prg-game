@@ -1,0 +1,35 @@
+# Virtual env
+.venv/
+venv/
+env/
+.env/
+.env.local
+
+# Bytecode / cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.pyo
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Distribution
+*.egg-info/
+.eggs/
+dist/
+build/
+*.egg
+
+# Coverage
+htmlcov/
+.coverage
+coverage.xml
+*.cover
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
