@@ -5,6 +5,7 @@ import { boxKey } from '../lib/utils';
 
 export function useGameState() {
   const [state, setState] = useState<State | null>(null);
+  const [moveHistory, setMoveHistory] = useState<Edge[]>([]);
   const [possibleEdges, setPossibleEdges] = useState<Edge[]>([]);
   const [over, setOver] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -27,6 +28,7 @@ export function useGameState() {
     }
     setError(null);
     setBoxOwners({});
+    setMoveHistory([]);
     setBusy(true);
     try {
       await window.dab.setEngine('csharp');
@@ -63,6 +65,7 @@ export function useGameState() {
       setError(null);
       try {
         const res = await window.dab.applyMove(state, norm);
+        setMoveHistory((prev) => [...prev, norm]);
         setState(res.state);
         if (res.closedBoxes?.length) {
           const whoClosed = res.extraTurn ? res.state.player : (3 - res.state.player);
@@ -90,26 +93,22 @@ export function useGameState() {
     setBusy(true);
     setError(null);
     try {
-      const res = await window.dab.botMove(state);
-      setState(res.state);
-      const whoClosed = 3 - res.state.player;
-      setBoxOwners((prev: Record<string, number>) => {
-        const next = { ...prev };
-        const edgeSetNew = new Set(res.state.edges.map((e) => edgeKey(normalizeEdge(e))));
-        for (let x = 0; x < res.state.nx; x++)
-          for (let y = 0; y < res.state.ny; y++) {
-            const k = `${x},${y}`;
-            if (prev[k]) continue;
-            const edges = [
-              { a: { x, y }, b: { x: x + 1, y } },
-              { a: { x, y }, b: { x, y: y + 1 } },
-              { a: { x: x + 1, y }, b: { x: x + 1, y: y + 1 } },
-              { a: { x, y: y + 1 }, b: { x: x + 1, y: y + 1 } },
-            ];
-            if (edges.every((e) => edgeSetNew.has(edgeKey(normalizeEdge(e))))) next[k] = whoClosed;
-          }
-        return next;
+      const res = await window.dab.botMoveUnified({
+        nx: state.nx,
+        ny: state.ny,
+        history: moveHistory,
       });
+      const moveNorm = normalizeEdge(res.move);
+      setMoveHistory((prev) => [...prev, moveNorm]);
+      setState(res.state);
+      if (res.closedBoxes?.length) {
+        const whoClosed = res.extraTurn ? res.state.player : 3 - res.state.player;
+        setBoxOwners((prev: Record<string, number>) => {
+          const next = { ...prev };
+          res.closedBoxes!.forEach((b: Box) => (next[boxKey(b)] = whoClosed));
+          return next;
+        });
+      }
       const { edges } = await window.dab.possibleMoves(res.state);
       setPossibleEdges(edges);
       const { gameOver } = await window.dab.gameOver(res.state);
@@ -119,7 +118,7 @@ export function useGameState() {
     } finally {
       setBusy(false);
     }
-  }, [state, busy, over]);
+  }, [state, moveHistory, busy, over]);
 
   return {
     state,

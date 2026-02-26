@@ -1,5 +1,17 @@
 # Джерела
 
+## Внутрішні документи проєкту
+
+- **[docs/tech/](tech/README.md)** — технології по мовах (TypeScript, C#, Java, Python, Prolog) і [протокол CLI](tech/protocol.md).
+- **[docs/DESIGN_NOTES.md](DESIGN_NOTES.md)** — структури даних, чому без CLP(FD), еталонна логіка.
+- **[docs/TESTING.md](TESTING.md)** — як запускати тести (Prolog, Python, Java, C#, інтеграційні з UI).
+
+*(Посилання відносні до папки `docs/`.)*
+
+---
+
+## Зовнішні джерела
+
 1. **Dots and Boxes (rules)** — [Wikipedia: Dots and Boxes](https://en.wikipedia.org/wiki/Dots_and_Boxes) — правила гри, представлення поля та ходів.
 
 2. **PSPACE-complete** — статті про складність комбінаторних ігор (опційно згадати для Dots and Boxes).

@@ -1,9 +1,42 @@
 import { app, BrowserWindow, ipcMain } from 'electron';
 import * as path from 'path';
 import { pathToFileURL } from 'url';
-import { startEngine, stopEngine, sendRequest, getEngineStatus, setOnStatusChange } from './rpc/engine';
+import { EngineInstance } from './rpc/EngineInstance';
+import { botMoveUnified } from './rpc/orchestrator';
+import type { DabSettings, LogEntry } from './rpc/types';
+import { DEFAULT_SETTINGS } from './rpc/types';
 
 let mainWindow: BrowserWindow | null = null;
+let settings: DabSettings = { ...DEFAULT_SETTINGS };
+let gameEngine: EngineInstance | null = null;
+let botEngine: EngineInstance | null = null;
+
+function sendLog(entry: LogEntry): void {
+  if (settings.logsEnabled && mainWindow) {
+    mainWindow.webContents.send('dab:log', entry);
+  }
+}
+
+function getOrCreateGameEngine(): EngineInstance {
+  if (!gameEngine) {
+    gameEngine = new EngineInstance('game', settings.gameEngine, sendLog);
+  }
+  return gameEngine;
+}
+
+function getOrCreateBotEngine(): EngineInstance {
+  if (!botEngine) {
+    botEngine = new EngineInstance('bot', settings.botEngine, sendLog);
+  }
+  return botEngine;
+}
+
+function restartAll(): void {
+  gameEngine?.stop();
+  botEngine?.stop();
+  gameEngine = null;
+  botEngine = null;
+}
 
 function createWindow(): void {
   const isDev = !app.isPackaged;
@@ -33,33 +66,71 @@ function createWindow(): void {
     },
   });
 
-  setOnStatusChange((status) => {
-    mainWindow?.webContents.send('dab:engineStatus', status);
-  });
-
   mainWindow.loadURL(loadUrl);
   mainWindow.on('closed', () => { mainWindow = null; });
 }
 
 app.whenReady().then(createWindow);
 app.on('window-all-closed', () => {
-  stopEngine();
+  restartAll();
   app.quit();
 });
 
-ipcMain.handle('dab:rpc', async (_, method: string, params: Record<string, unknown>) => {
-  return sendRequest(method, params);
+ipcMain.handle('dab:getSettings', async () => settings);
+
+ipcMain.handle('dab:setSettings', async (_, newSettings: DabSettings) => {
+  settings = { ...newSettings };
+  restartAll();
 });
 
-ipcMain.handle('dab:setEngine', async (_, _engineName: string) => {
-  startEngine();
+ipcMain.handle('dab:rpcGame', async (_, method: string, params: Record<string, unknown>) => {
+  const engine = getOrCreateGameEngine();
+  engine.start();
+  return engine.request(method, params);
+});
+
+ipcMain.handle('dab:rpcBot', async (_, method: string, params: Record<string, unknown>) => {
+  const engine = getOrCreateBotEngine();
+  engine.start();
+  return engine.request(method, params);
+});
+
+ipcMain.handle(
+  'dab:botMoveUnified',
+  async (
+    _,
+    params: { nx: number; ny: number; history: { a: { x: number; y: number }; b: { x: number; y: number } }[] }
+  ) => {
+    const game = getOrCreateGameEngine();
+    const bot = getOrCreateBotEngine();
+    game.start();
+    bot.start();
+    return botMoveUnified(game, bot, params);
+  }
+);
+
+ipcMain.handle('dab:restartEngines', async () => {
+  restartAll();
+});
+
+ipcMain.handle('dab:clearLogs', async () => {
+  /* no-op: renderer clears its own buffer */
+});
+
+ipcMain.handle('dab:rpc', async (_, method: string, params: Record<string, unknown>) => {
+  const engine = getOrCreateGameEngine();
+  engine.start();
+  return engine.request(method, params);
+});
+
+ipcMain.handle('dab:setEngine', async () => {
+  getOrCreateGameEngine().start();
 });
 
 ipcMain.handle('dab:restartEngine', async () => {
-  stopEngine();
-  startEngine();
+  restartAll();
 });
 
 ipcMain.handle('dab:getEngineStatus', async () => {
-  return getEngineStatus();
+  return 'ready';
 });

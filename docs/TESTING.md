@@ -41,3 +41,16 @@ cd src/csharp && dotnet test
 Або: `make csharp-tests`.
 
 Аналогічні сценарії до Java.
+
+## Інтеграційні тести CLI (Electron)
+
+Перевірка JSON-RPC контракту: UI відправляє запити до зібраного CLI і перевіряє відповіді. Команди виконуються з каталогу **ui-electron/** (перед цим `npm install`).
+
+```bash
+cd ui-electron
+npm run test:integration:java    # потрібен зібраний dab-cli.jar (src/java)
+npm run test:integration:python  # потрібен Python і src/python
+npm run test:integration:prolog  # потрібен SWI-Prolog (swipl) і src/prolog
+```
+
+Сценарії: init (формат state), possibleMoves (2×2 → 12 ребер), applyMove для 1×1 (закриття клітинки, extraTurn), botMove (move + state + reason), gameOver, повторний хід по тому ж ребру → очікується RPC error. Деталі протоколу — [tech/protocol.md](tech/protocol.md).

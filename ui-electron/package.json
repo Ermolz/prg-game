@@ -14,6 +14,9 @@
     "build:electron": "tsc -p tsconfig.electron.json",
     "start": "set ELECTRON_LOAD_BUILT=1&& electron .",
     "test:integration": "node scripts/integration-cli.test.mjs",
+    "test:integration:java": "node scripts/integration-cli-java.test.mjs",
+    "test:integration:python": "node scripts/integration-cli-python.test.mjs",
+    "test:integration:prolog": "node scripts/integration-cli-prolog.test.mjs",
     "publish:cli": "node scripts/publish-cli.cjs",
     "dist": "npm run publish:cli && npm run build && electron-builder"
   },
@@ -46,6 +49,9 @@
     ],
     "directories": {
       "output": "release"
+    },
+    "win": {
+      "signAndEditExecutable": false
     }
   }
 }

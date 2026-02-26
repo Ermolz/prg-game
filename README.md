@@ -12,6 +12,7 @@
 | `src/csharp` | Рушій на C# (Core + CLI для UI) |
 | `ui-electron` | Графічний інтерфейс: Electron, TypeScript, Vite, React |
 | `tests` | Тести (Prolog, Python тощо) |
+| `docs/tech` | Опис технологій по мовах і протокол CLI (JSON-RPC) — [docs/tech/](docs/tech/README.md) |
 
 ## Запуск тестів
 

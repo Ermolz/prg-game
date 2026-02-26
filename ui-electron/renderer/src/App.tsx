@@ -1,4 +1,6 @@
+import { useState } from 'react';
 import { useGameState } from './hooks/useGameState';
+import { useSettings } from './hooks/useSettings';
 import {
   LoadingScreen,
   Header,
@@ -6,9 +8,13 @@ import {
   ErrorBanner,
   ControlsCard,
   GameBoard,
+  SettingsModal,
+  LogPanel,
 } from './components';
 
 export default function App() {
+  const [settingsOpen, setSettingsOpen] = useState(false);
+  const { settings, applySettings } = useSettings();
   const {
     state,
     possibleEdges,
@@ -33,7 +39,20 @@ export default function App() {
         busy={busy}
         onNew22={() => loadGame(2, 2)}
         onNew32={() => loadGame(3, 2)}
+        onOpenSettings={() => setSettingsOpen(true)}
       />
+
+      {settingsOpen && (
+        <SettingsModal
+          isOpen={settingsOpen}
+          onClose={() => setSettingsOpen(false)}
+          settings={settings}
+          onApply={(s) => {
+            applySettings(s);
+            setSettingsOpen(false);
+          }}
+        />
+      )}
 
       {over && <GameOverBanner state={state} />}
       {error && <ErrorBanner message={error} />}
@@ -46,6 +65,8 @@ export default function App() {
         boxOwners={boxOwners}
         onEdgeClick={onEdgeClick}
       />
+
+      {settings.logsEnabled && <LogPanel logsVerbose={settings.logsVerbose} />}
     </div>
   );
 }

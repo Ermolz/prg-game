@@ -7,9 +7,10 @@ type HeaderProps = {
   busy: boolean;
   onNew22: () => void;
   onNew32: () => void;
+  onOpenSettings?: () => void;
 };
 
-export function Header({ engineStatus, busy, onNew22, onNew32 }: HeaderProps) {
+export function Header({ engineStatus, busy, onNew22, onNew32, onOpenSettings }: HeaderProps) {
   return (
     <header className="flex flex-wrap items-center justify-between gap-4">
       <div className="flex flex-wrap items-center gap-3">
@@ -27,6 +28,11 @@ export function Header({ engineStatus, busy, onNew22, onNew32 }: HeaderProps) {
         <span className={`rounded px-2 py-0.5 text-xs font-medium ${engineStatusClass(engineStatus)}`}>
           Engine: {engineStatus}
         </span>
+        {onOpenSettings && (
+          <button type="button" className={btnSecondary} onClick={onOpenSettings} disabled={busy}>
+            Settings
+          </button>
+        )}
         <button
           type="button"
           className={btnSecondary}

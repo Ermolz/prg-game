@@ -1,3 +1,34 @@
+export type EngineKind = 'csharp' | 'python' | 'java' | 'prolog';
+
+export interface DabSettings {
+  gameEngine: EngineKind;
+  botEngine: EngineKind;
+  logsEnabled: boolean;
+  logsVerbose: boolean;
+}
+
+export const DEFAULT_SETTINGS: DabSettings = {
+  gameEngine: 'csharp',
+  botEngine: 'csharp',
+  logsEnabled: false,
+  logsVerbose: false,
+};
+
+/** Minimal edge shape for orchestrator (same as renderer Edge) */
+export type Edge = { a: { x: number; y: number }; b: { x: number; y: number } };
+
+export type LogEntry = {
+  ts: number;
+  scope: 'game' | 'bot';
+  engine: EngineKind;
+  dir: 'req' | 'res' | 'stderr';
+  method?: string;
+  id?: number;
+  ok?: boolean;
+  ms?: number;
+  data: unknown;
+};
+
 /** JSON-RPC request sent to engine stdin */
 export interface RpcRequest {
   jsonrpc: '2.0';

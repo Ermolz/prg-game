@@ -31,7 +31,7 @@ while (true)
     {
         using var doc = JsonDocument.Parse(line);
         var root = doc.RootElement;
-        if (root.TryGetProperty("id", out var idProp)) id = idProp;
+        if (root.TryGetProperty("id", out var idProp)) id = idProp.Clone();
         if (root.TryGetProperty("method", out var m)) method = m.GetString();
         if (root.TryGetProperty("params", out var p)) @params = p.Clone();
 
