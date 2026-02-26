@@ -1,16 +1,17 @@
-# Publish CLI packages only when a release is published:
-# - C# → GitHub Packages (NuGet)
-# - Java → GitHub Packages (Maven)
-# - Python → PyPI (set secret PYPI_API_TOKEN)
-# - Prolog → workflow artifact (zip)
+# Publish CLI packages:
+# - when a release is published (version = tag)
+# - when push to branch 'ui' (version = 1.0.0-ci.<run_number>)
+# C# → GitHub Packages (NuGet), Java → GitHub Packages (Maven), Python → PyPI, Prolog → artifact (zip)
 name: Publish packages
 
 on:
   release:
     types: [published]
+  push:
+    branches: [ui]
 
 env:
-  PACKAGE_VERSION: ${{ github.event.release.tag_name }}
+  PACKAGE_VERSION: ${{ github.event.release.tag_name || format('1.0.0-ci.{0}', github.run_number) }}
 
 jobs:
   publish-csharp:
