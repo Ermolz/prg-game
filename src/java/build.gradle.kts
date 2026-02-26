@@ -2,6 +2,7 @@ plugins {
     java
     application
     id("com.gradleup.shadow") version "9.2.0"
+    `maven-publish`
 }
 
 group = "dab"
@@ -36,6 +37,33 @@ tasks.shadowJar {
     archiveBaseName.set("dab-cli")
     archiveClassifier.set("")
     archiveVersion.set("")
+}
+
+publishing {
+    repositories {
+        maven {
+            name = "GitHubPackages"
+            url = uri(
+                "https://maven.pkg.github.com/" +
+                (project.findProperty("githubRepository")?.toString() ?: System.getenv("GITHUB_REPOSITORY") ?: "owner/repo")
+            )
+            credentials {
+                username = project.findProperty("gpr.user")?.toString() ?: System.getenv("GITHUB_ACTOR") ?: ""
+                password = project.findProperty("gpr.key")?.toString() ?: System.getenv("GITHUB_TOKEN") ?: ""
+            }
+        }
+    }
+    publications {
+        create<MavenPublication>("shadow") {
+            groupId = "dab"
+            artifactId = "dab-cli"
+            version = project.version.toString()
+            artifact(tasks.shadowJar.get()) {
+                classifier = ""
+                extension = "jar"
+            }
+        }
+    }
 }
 
 tasks.test {

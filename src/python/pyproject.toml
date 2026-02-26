@@ -1,0 +1,19 @@
+[build-system]
+requires = ["setuptools>=61", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "dab-cli"
+version = "1.0.0"
+description = "Dots and Boxes game engine CLI (JSON-RPC over stdin/stdout)"
+requires-python = ">=3.9"
+license = { text = "MIT" }
+authors = [{ name = "Dots and Boxes" }]
+keywords = ["game", "dots-and-boxes", "cli"]
+
+[project.scripts]
+dab-cli = "cli:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["dab*"]

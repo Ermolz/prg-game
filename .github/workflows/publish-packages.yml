@@ -62,7 +62,7 @@ jobs:
           JAVADIR="src/java"
           [ ! -f "$JAVADIR/build.gradle.kts" ] && JAVADIR="game/src/java"
           cd "$JAVADIR"
-          gradle publishShadowPublicationToGitHubPackagesRepository -Pversion=${{ env.VERSION }}
+          gradle shadowJar publish -Pversion=${{ env.VERSION }}
 
   publish-python:
     runs-on: ubuntu-latest

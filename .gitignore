@@ -68,6 +68,9 @@ packages/
 Thumbs.db
 Desktop.ini
 
+# === CI / build artifacts ===
+out/
+
 # === Misc ===
 *.tmp
 *.bak

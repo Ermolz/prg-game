@@ -5,6 +5,16 @@
     <ImplicitUsings>enable</ImplicitUsings>
     <Nullable>enable</Nullable>
     <RootNamespace>DotsAndBoxes.Cli</RootNamespace>
+    <IsPackable>true</IsPackable>
+    <PackAsTool>true</PackAsTool>
+    <ToolCommandName>dab-cli</ToolCommandName>
+    <PackageId>DotsAndBoxes.Cli</PackageId>
+    <Version>1.0.0</Version>
+    <Authors>Dots and Boxes</Authors>
+    <Description>Dots and Boxes game engine CLI (JSON-RPC over stdin/stdout).</Description>
+    <PackageTags>game;dots-and-boxes;cli</PackageTags>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
+    <RepositoryType>git</RepositoryType>
   </PropertyGroup>
   <ItemGroup>
     <ProjectReference Include="..\DotsAndBoxes.Core\DotsAndBoxes.Core.csproj" />
