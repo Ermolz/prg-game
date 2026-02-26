@@ -58,8 +58,10 @@ jobs:
       - uses: gradle/actions/setup-gradle@v3
       - name: Publish to GitHub Packages (Maven)
         run: |
-          cd src/java
-          gradle publish -Pversion=${{ env.VERSION }}
+          JAVADIR="src/java"
+          [ ! -f "$JAVADIR/build.gradle.kts" ] && JAVADIR="game/src/java"
+          cd "$JAVADIR"
+          gradle publishShadowPublicationToGitHubPackagesRepository -Pversion=${{ env.VERSION }}
 
   publish-python:
     runs-on: ubuntu-latest
@@ -74,21 +76,21 @@ jobs:
         run: pip install build twine
       - name: Build wheel and sdist
         run: |
-          cd src/python
-          sed -i "s/^version = .*/version = \"${{ env.VERSION }}\"/" pyproject.toml
-          python -m build
+          PYDIR="src/python"
+          [ ! -f "$PYDIR/pyproject.toml" ] && PYDIR="game/src/python"
+          sed -i "s/^version = .*/version = \"${{ env.VERSION }}\"/" "$PYDIR/pyproject.toml"
+          cd "$PYDIR" && python -m build
+          mkdir -p "$GITHUB_WORKSPACE/out/python-dist" && cp -r dist/* "$GITHUB_WORKSPACE/out/python-dist/"
       - name: Publish to PyPI
         env:
           TWINE_USERNAME: __token__
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          cd src/python
-          twine upload dist/* -r pypi --skip-existing
+        run: twine upload out/python-dist/* -r pypi --skip-existing
       - name: Upload Python dist as artifact
         uses: actions/upload-artifact@v4
         with:
           name: dab-cli-python-dist
-          path: src/python/dist/
+          path: out/python-dist/
 
   package-prolog:
     runs-on: ubuntu-latest
