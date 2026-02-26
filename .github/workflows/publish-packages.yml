@@ -1,0 +1,110 @@
+# Publish CLI packages only when a release is published:
+# - C# → GitHub Packages (NuGet)
+# - Java → GitHub Packages (Maven)
+# - Python → PyPI (set secret PYPI_API_TOKEN)
+# - Prolog → workflow artifact (zip)
+name: Publish packages
+
+on:
+  release:
+    types: [published]
+
+env:
+  PACKAGE_VERSION: ${{ github.event.release.tag_name }}
+
+jobs:
+  publish-csharp:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set version (strip v prefix)
+        run: echo "VERSION=${PACKAGE_VERSION#v}" >> $GITHUB_ENV
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: "9.0.x"
+      - name: Pack NuGet
+        run: |
+          mkdir -p out/nuget
+          cd src/csharp/DotsAndBoxes.Cli
+          dotnet pack -c Release -o ../../../out/nuget -p:Version=${{ env.VERSION }}
+      - name: Push to GitHub Packages (NuGet)
+        run: |
+          cd out/nuget
+          dotnet nuget push "*.nupkg" \
+            --source "https://nuget.pkg.github.com/${{ github.repository_owner }}/index.json" \
+            --api-key ${{ secrets.GITHUB_TOKEN }} \
+            --skip-duplicate
+
+  publish-java:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    env:
+      GITHUB_REPOSITORY: ${{ github.repository }}
+      GITHUB_ACTOR: ${{ github.actor }}
+      GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set version (strip v prefix)
+        run: echo "VERSION=${PACKAGE_VERSION#v}" >> $GITHUB_ENV
+      - uses: actions/setup-java@v4
+        with:
+          distribution: "temurin"
+          java-version: "17"
+      - uses: gradle/actions/setup-gradle@v3
+      - name: Publish to GitHub Packages (Maven)
+        run: |
+          cd src/java
+          gradle publish -Pversion=${{ env.VERSION }}
+
+  publish-python:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set version (strip v prefix)
+        run: echo "VERSION=${PACKAGE_VERSION#v}" >> $GITHUB_ENV
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install build tools
+        run: pip install build twine
+      - name: Build wheel and sdist
+        run: |
+          cd src/python
+          sed -i "s/^version = .*/version = \"${{ env.VERSION }}\"/" pyproject.toml
+          python -m build
+      - name: Publish to PyPI
+        if: secrets.PYPI_API_TOKEN != ''
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          cd src/python
+          twine upload dist/* -r pypi --skip-existing
+      - name: Upload Python dist as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dab-cli-python-dist
+          path: src/python/dist/
+
+  package-prolog:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Set version (strip v prefix)
+        run: echo "VERSION=${PACKAGE_VERSION#v}" >> $GITHUB_ENV
+      - name: Zip Prolog CLI
+        run: |
+          mkdir -p out
+          cd src/prolog
+          zip -r ../../out/dab-cli-prolog-${{ env.VERSION }}.zip . -i "*.pl"
+          cd ../..
+      - name: Upload Prolog zip artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: dab-cli-prolog
+          path: out/dab-cli-prolog-${{ env.VERSION }}.zip
