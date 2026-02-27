@@ -11,7 +11,7 @@ export function useSettings(): {
 
   useEffect(() => {
     const loaded = loadSettings();
-    window.dab?.setSettings?.(loaded);
+    window.dab?.setSettings?.(loaded, { initial: true });
   }, []);
 
   const setSettings = useCallback((s: DabSettings) => {

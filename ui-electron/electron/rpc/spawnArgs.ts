@@ -1,4 +1,5 @@
 import * as path from 'path';
+import * as fs from 'fs';
 import type { EngineKind } from './types';
 
 const UI_ELECTRON_ROOT = path.join(__dirname, '..', '..');
@@ -36,6 +37,14 @@ export function getSpawnArgs(kind: EngineKind): { command: string; args: string[
       const args = ['-jar', path.join(cliDir, 'dab-cli.jar')];
       return { command, args, cwd: cliDir };
     }
+    const jarPath = path.join(JAVA_ROOT, 'build', 'libs', 'dab-cli.jar');
+    if (fs.existsSync(jarPath)) {
+      return {
+        command: 'java',
+        args: ['-jar', jarPath],
+        cwd: path.dirname(jarPath),
+      };
+    }
     const gradlew = isWin ? 'gradlew.bat' : './gradlew';
     const command = path.join(JAVA_ROOT, gradlew);
     return {
@@ -46,15 +55,14 @@ export function getSpawnArgs(kind: EngineKind): { command: string; args: string[
   }
 
   if (kind === 'python') {
+    const pythonCmd = isWin ? 'python' : 'python3';
     if (app.isPackaged && process.resourcesPath) {
       const cliDir = path.join(process.resourcesPath, 'cli');
-      const command = 'python';
       const args = [path.join(cliDir, 'cli.py')];
-      return { command, args, cwd: cliDir };
+      return { command: pythonCmd, args, cwd: cliDir };
     }
-    const command = 'python';
     const args = [path.join(PYTHON_ROOT, 'cli.py')];
-    return { command, args, cwd: PYTHON_ROOT };
+    return { command: pythonCmd, args, cwd: PYTHON_ROOT };
   }
 
   if (kind === 'prolog') {

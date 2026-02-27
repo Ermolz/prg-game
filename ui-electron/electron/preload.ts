@@ -31,7 +31,8 @@ const dab = {
   },
   restartEngine: () => ipcRenderer.invoke('dab:restartEngine'),
   restartEngines: () => ipcRenderer.invoke('dab:restartEngines'),
-  setSettings: (settings: unknown) => ipcRenderer.invoke('dab:setSettings', settings),
+  setSettings: (settings: unknown, options?: { initial?: boolean }) =>
+    ipcRenderer.invoke('dab:setSettings', settings, options),
   getSettings: () => ipcRenderer.invoke('dab:getSettings'),
   onLog: (callback: (entry: unknown) => void) => {
     ipcRenderer.on('dab:log', (_e, entry: unknown) => callback(entry));

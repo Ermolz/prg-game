@@ -160,7 +160,11 @@ export class EngineInstance {
 
   stop(): void {
     if (this.childProc) {
-      this.childProc.kill();
+      try {
+        this.childProc.kill();
+      } catch {
+        /* process may already be dead */
+      }
       this.childProc = null;
     }
     this.pending.forEach((entry) => {

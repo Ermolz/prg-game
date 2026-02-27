@@ -31,8 +31,12 @@ export function useGameState() {
       setState(s as State);
       setBoxOwners(bo ?? {});
       setOver(go ?? false);
-      const { edges } = await window.dab.possibleMoves(s);
-      setPossibleEdges(edges ?? []);
+      if (s != null) {
+        const { edges } = await window.dab.possibleMoves(s);
+        setPossibleEdges(edges ?? []);
+      } else {
+        setPossibleEdges([]);
+      }
     },
     []
   );
@@ -53,15 +57,17 @@ export function useGameState() {
       const res = await window.dab.newGame(nx, ny);
       const s = res?.state ?? res;
       if (!s) {
-        setError('Invalid init response: no state');
+        setError(
+          'Engine did not respond. Try "Restart engines" in Settings, then start a new game. For Java: run "cd src/java && ./gradlew shadowJar" once.'
+        );
         setBusy(false);
         return;
       }
       setState(s);
       const { edges } = await window.dab.possibleMoves(s);
-      setPossibleEdges(edges);
+      setPossibleEdges(edges ?? []);
       const { gameOver } = await window.dab.gameOver(s);
-      setOver(gameOver);
+      setOver(gameOver ?? false);
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -227,6 +233,10 @@ export function useGameState() {
       setError(null);
       const doMove = async () => {
         const res = await window.dab!.applyMove(state, norm);
+        if (!res?.state) {
+          setError('Engine did not respond (try restarting the engine)');
+          return;
+        }
         setMoveHistory((prev) => [...prev, norm]);
         setState(res.state);
         if (res.closedBoxes?.length) {
@@ -238,9 +248,9 @@ export function useGameState() {
           });
         }
         const { edges } = await window.dab.possibleMoves(res.state);
-        setPossibleEdges(edges);
+        setPossibleEdges(edges ?? []);
         const { gameOver } = await window.dab.gameOver(res.state);
-        setOver(gameOver);
+        setOver(gameOver ?? false);
       };
       try {
         await doMove();
@@ -277,6 +287,10 @@ export function useGameState() {
         ny: state.ny,
         history: moveHistory,
       });
+      if (!res?.state || !res?.move) {
+        setError('Engine did not respond (try restarting the engine)');
+        return;
+      }
       const moveNorm = normalizeEdge(res.move);
       setMoveHistory((prev) => [...prev, moveNorm]);
       setState(res.state);
@@ -289,9 +303,9 @@ export function useGameState() {
         });
       }
       const { edges } = await window.dab.possibleMoves(res.state);
-      setPossibleEdges(edges);
+      setPossibleEdges(edges ?? []);
       const { gameOver } = await window.dab.gameOver(res.state);
-      setOver(gameOver);
+      setOver(gameOver ?? false);
     };
     try {
       await doBotMove();

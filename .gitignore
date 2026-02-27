@@ -78,3 +78,8 @@ out/
 .env
 .env.local
 *.local
+
+# CLI / debug redirects
+out.bin
+err.txt
+out.txt

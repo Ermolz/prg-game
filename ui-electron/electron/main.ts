@@ -101,23 +101,44 @@ app.on('window-all-closed', () => {
   app.quit();
 });
 
+/** Catch engine errors (Engine stopped, EPIPE) so exit/shutdown doesn't log unhandled errors */
+function safeEngine<T>(p: Promise<T>, fallback: T): Promise<T> {
+  return p.catch(() => fallback);
+}
+
 ipcMain.handle('dab:getSettings', async () => settings);
 
-ipcMain.handle('dab:setSettings', async (_, newSettings: Partial<DabSettings>) => {
-  settings = { ...DEFAULT_SETTINGS, ...newSettings };
-  restartAll();
-});
+ipcMain.handle(
+  'dab:setSettings',
+  async (_: unknown, newSettings: Partial<DabSettings>, options?: { initial?: boolean }) => {
+    settings = { ...DEFAULT_SETTINGS, ...newSettings };
+    if (options?.initial) return;
+    try {
+      restartAll();
+    } catch {
+      /* ignore when shutting down */
+    }
+  }
+);
 
 ipcMain.handle('dab:rpcGame', async (_, method: string, params: Record<string, unknown>) => {
-  const engine = getOrCreateGameEngine();
-  engine.start();
-  return engine.request(method, params);
+  try {
+    const engine = getOrCreateGameEngine();
+    engine.start();
+    return await safeEngine(engine.request(method, params), null);
+  } catch {
+    return null;
+  }
 });
 
 ipcMain.handle('dab:rpcBot', async (_, method: string, params: Record<string, unknown>) => {
-  const engine = getOrCreateBotEngine();
-  engine.start();
-  return engine.request(method, params);
+  try {
+    const engine = getOrCreateBotEngine();
+    engine.start();
+    return await safeEngine(engine.request(method, params), null);
+  } catch {
+    return null;
+  }
 });
 
 ipcMain.handle(
@@ -126,21 +147,31 @@ ipcMain.handle(
     _,
     params: { nx: number; ny: number; history: { a: { x: number; y: number }; b: { x: number; y: number } }[] }
   ) => {
-    const game = getOrCreateGameEngine();
-    const bot = getOrCreateBotEngine();
-    game.start();
-    bot.start();
-    return botMoveUnified(game, bot, params);
+    try {
+      const game = getOrCreateGameEngine();
+      const bot = getOrCreateBotEngine();
+      game.start();
+      bot.start();
+      return await safeEngine(botMoveUnified(game, bot, params), null);
+    } catch {
+      return null;
+    }
   }
 );
 
 ipcMain.handle('dab:restartEngines', async () => {
   sendGameEngineStatus('restarting');
   sendBotEngineStatus('restarting');
-  restartAll();
+  try {
+    restartAll();
+  } catch {
+    /* ignore */
+  }
 });
 
 type EdgeLike = { a: { x: number; y: number }; b: { x: number; y: number } };
+
+const replayFallback = { state: null, boxOwners: {} as Record<string, number>, gameOver: true };
 
 ipcMain.handle(
   'dab:replay',
@@ -148,24 +179,34 @@ ipcMain.handle(
     _,
     params: { nx: number; ny: number; history: EdgeLike[] }
   ): Promise<{ state: unknown; boxOwners: Record<string, number>; gameOver: boolean }> => {
-    const game = getOrCreateGameEngine();
-    game.start();
-    let res: { state: unknown; closedBoxes?: { x: number; y: number }[]; extraTurn?: boolean } =
-      await game.request('init', { nx: params.nx, ny: params.ny });
-    let state = res.state as { player: number };
-    const boxOwners: Record<string, number> = {};
-    for (const edge of params.history) {
-      const r = await game.request<typeof res>('applyMove', { edge });
-      state = r.state as { player: number };
-      if (r.closedBoxes?.length) {
-        const whoClosed = r.extraTurn ? state.player : 3 - state.player;
-        for (const b of r.closedBoxes) {
-          boxOwners[`${b.x},${b.y}`] = whoClosed;
+    try {
+      const game = getOrCreateGameEngine();
+      game.start();
+      const initRes = await safeEngine(
+        game.request('init', { nx: params.nx, ny: params.ny }),
+        null as unknown
+      );
+      if (initRes == null) return replayFallback;
+      let res: { state: unknown; closedBoxes?: { x: number; y: number }[]; extraTurn?: boolean } = initRes as never;
+      let state = res.state as { player: number };
+      const boxOwners: Record<string, number> = {};
+      for (const edge of params.history) {
+        const r = await safeEngine(game.request<typeof res>('applyMove', { edge }), null as unknown);
+        if (r == null) return replayFallback;
+        state = (r as typeof res).state as { player: number };
+        const rr = r as { closedBoxes?: { x: number; y: number }[]; extraTurn?: boolean };
+        if (rr.closedBoxes?.length) {
+          const whoClosed = rr.extraTurn ? state.player : 3 - state.player;
+          for (const b of rr.closedBoxes) {
+            boxOwners[`${b.x},${b.y}`] = whoClosed;
+          }
         }
       }
+      const go = await safeEngine(game.request<{ gameOver: boolean }>('gameOver', {}), { gameOver: true });
+      return { state, boxOwners, gameOver: go?.gameOver ?? true };
+    } catch {
+      return replayFallback;
     }
-    const go = await game.request<{ gameOver: boolean }>('gameOver', {});
-    return { state, boxOwners, gameOver: go.gameOver };
   }
 );
 
@@ -219,9 +260,13 @@ ipcMain.handle('dab:clearLogs', async () => {
 });
 
 ipcMain.handle('dab:rpc', async (_, method: string, params: Record<string, unknown>) => {
-  const engine = getOrCreateGameEngine();
-  engine.start();
-  return engine.request(method, params);
+  try {
+    const engine = getOrCreateGameEngine();
+    engine.start();
+    return await safeEngine(engine.request(method, params), null);
+  } catch {
+    return null;
+  }
 });
 
 ipcMain.handle('dab:setEngine', async () => {

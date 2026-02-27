@@ -17,37 +17,70 @@ const CSHARP_ROOT = path.resolve(REPO_ROOT, 'src', 'csharp');
 const HEADER_END = Buffer.from('\r\n\r\n', 'ascii');
 
 function sendContentLength(cli, body) {
-  const bodyBuf = Buffer.from(body, 'utf8');
-  const header = `Content-Length: ${bodyBuf.length}\r\n\r\n`;
+  const len = Buffer.byteLength(body, 'utf8');
+  const header = `Content-Length: ${len}\r\n\r\n`;
   cli.stdin.write(header, 'ascii');
-  cli.stdin.write(bodyBuf);
+  cli.stdin.write(body, 'utf8');
+}
+
+function tryParseFrame(buf) {
+  const idx = buf.indexOf(HEADER_END);
+  if (idx < 0) return false;
+  const header = buf.subarray(0, idx).toString('ascii');
+  const match = /Content-Length:\s*(\d+)/i.exec(header);
+  if (!match) throw new Error(`No Content-Length in header: ${header}`);
+  const len = parseInt(match[1], 10);
+  const bodyStart = idx + HEADER_END.length;
+  if (buf.length < bodyStart + len) return false;
+  return buf.subarray(bodyStart, bodyStart + len).toString('utf8');
 }
 
 function readNextFrame(cli) {
   return new Promise((resolve, reject) => {
     let buf = Buffer.alloc(0);
-    const onData = (chunk) => {
+    let done = false;
+
+    function cleanup() {
+      cli.stdout.off('data', onData);
+      cli.off('close', onClose);
+    }
+
+    function onData(chunk) {
       buf = Buffer.concat([buf, Buffer.isBuffer(chunk) ? chunk : Buffer.from(chunk)]);
-      const idx = buf.indexOf(HEADER_END);
-      if (idx < 0) return;
-      const header = buf.subarray(0, idx).toString('ascii');
-      const match = /Content-Length:\s*(\d+)/i.exec(header);
-      if (!match) {
-        reject(new Error('No Content-Length in header'));
+      try {
+        const body = tryParseFrame(buf);
+        if (body !== false) {
+          done = true;
+          cleanup();
+          resolve(body);
+        }
+      } catch (e) {
+        cleanup();
+        reject(e);
+      }
+    }
+
+    function onClose(code) {
+      if (done) return;
+      try {
+        const body = tryParseFrame(buf);
+        if (body !== false) {
+          done = true;
+          cleanup();
+          resolve(body);
+          return;
+        }
+      } catch (e) {
+        cleanup();
+        reject(e);
         return;
       }
-      const len = parseInt(match[1], 10);
-      const bodyStart = idx + HEADER_END.length;
-      if (buf.length < bodyStart + len) return;
-      const body = buf.subarray(bodyStart, bodyStart + len).toString('utf8');
-      cli.stdout.removeListener('data', onData);
-      resolve(body);
-    };
+      cleanup();
+      reject(new Error(`CLI closed before full frame. code=${code}, bufLen=${buf.length}`));
+    }
+
     cli.stdout.on('data', onData);
-    cli.once('exit', (code) => {
-      cli.stdout.removeListener('data', onData);
-      reject(new Error(`CLI exited with code ${code}`));
-    });
+    cli.on('close', onClose);
   });
 }
 
