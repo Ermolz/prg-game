@@ -1,17 +1,31 @@
 export type EngineKind = 'csharp' | 'python' | 'java' | 'prolog';
 
+export type GameMode = 'PvP' | 'PvE' | 'EvE';
+
+export type LogsLayout = 'bottom' | 'drawer';
+
 export interface DabSettings {
   gameEngine: EngineKind;
   botEngine: EngineKind;
+  gameMode: GameMode;
+  defaultNx: number;
+  defaultNy: number;
   logsEnabled: boolean;
-  logsVerbose: boolean;
+  verboseLogs: boolean;
+  autoScrollLogs: boolean;
+  logsLayout: LogsLayout;
 }
 
 export const DEFAULT_SETTINGS: DabSettings = {
   gameEngine: 'csharp',
   botEngine: 'csharp',
+  gameMode: 'PvE',
+  defaultNx: 2,
+  defaultNy: 2,
   logsEnabled: false,
-  logsVerbose: false,
+  verboseLogs: false,
+  autoScrollLogs: true,
+  logsLayout: 'bottom',
 };
 
 /** Minimal edge shape for orchestrator (same as renderer Edge) */

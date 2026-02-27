@@ -3,6 +3,8 @@ import type { EngineKind, LogEntry } from './types';
 import { getSpawnArgs } from './spawnArgs';
 import { isRpcError, type RpcResponse } from './types';
 
+export type EngineStatus = 'starting' | 'ready' | 'down' | 'restarting';
+
 const RPC_TIMEOUT_MS = 10000;
 const HEADER_END = Buffer.from('\r\n\r\n', 'ascii');
 
@@ -63,19 +65,23 @@ export class EngineInstance {
   private readonly scope: 'game' | 'bot';
   private readonly engineKind: EngineKind;
   private readonly onLog: ((entry: LogEntry) => void) | undefined;
+  private readonly onStatusChange: ((status: EngineStatus) => void) | undefined;
   private childProc: ChildProcess | null = null;
   private readonly pending = new Map<number, PendingEntry>();
   private nextId = 1;
   private readonly bufferRef = { current: Buffer.alloc(0) };
+  private readySent = false;
 
   constructor(
     scope: 'game' | 'bot',
     engineKind: EngineKind,
-    onLog?: (entry: LogEntry) => void
+    onLog?: (entry: LogEntry) => void,
+    onStatusChange?: (status: EngineStatus) => void
   ) {
     this.scope = scope;
     this.engineKind = engineKind;
     this.onLog = onLog;
+    this.onStatusChange = onStatusChange;
   }
 
   private log(entry: Omit<LogEntry, 'ts' | 'scope' | 'engine'>): void {
@@ -89,6 +95,8 @@ export class EngineInstance {
 
   start(): void {
     if (this.childProc) return;
+    this.readySent = false;
+    this.onStatusChange?.('starting');
     const { command, args, cwd } = getSpawnArgs(this.engineKind);
     this.childProc = spawn(command, args, {
       cwd,
@@ -115,6 +123,10 @@ export class EngineInstance {
               this.log({ dir: 'res', id, ok: false, ms, data: msg.error });
               entry.reject(new Error(msg.error.message ?? JSON.stringify(msg.error)));
             } else {
+              if (!this.readySent) {
+                this.readySent = true;
+                this.onStatusChange?.('ready');
+              }
               this.log({ dir: 'res', id, ok: true, ms, data: msg.result });
               entry.resolve(msg.result);
             }
@@ -136,6 +148,8 @@ export class EngineInstance {
     this.childProc.on('exit', (code) => {
       if (code !== 0 && code !== null) console.error(`[engine:${this.scope}] exit:`, code);
       this.childProc = null;
+      this.readySent = false;
+      this.onStatusChange?.('down');
       this.pending.forEach((entry) => {
         if (entry.timer) clearTimeout(entry.timer);
         entry.reject(new Error('Engine stopped'));
