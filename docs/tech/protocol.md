@@ -46,8 +46,16 @@
 | **init** | `{ "nx": number, "ny": number }` | `{ "state": State }` |
 | **applyMove** | `{ "edge": Edge }` | `{ "state": State, "closedBoxes": Box[], "extraTurn": boolean }` |
 | **possibleMoves** | (пустий або `{}`) | `{ "edges": Edge[] }` |
-| **botMove** | (пустий або `{}`) | `{ "move": Edge, "reason": string, "state": State }` |
+| **botMove** | див. нижче | `{ "move": Edge, "reason": string, "state": State, "meta": BotMeta }` |
 | **gameOver** | (пустий або `{}`) | `{ "gameOver": boolean }` |
+
+**botMove (розширення Prolog-CLI).** Рушії Python/Java/C# залишаються без змін: для них можна передавати `{}` як раніше; поле **`meta`** у відповіді в цих рушіях може бути відсутнім (або додано пізніше). У **Prolog**-CLI (`src/prolog/cli.pl`) відповідь **завжди** містить **`meta`** (єдиний контракт `BotMeta`):
+
+- **`params`** за замовчуванням: `{}` або без ключа `strategy` — стратегія **`greedy_safe`** (як раніше для інтеграційних тестів).
+- Опційно: `{ "strategy": "minimax"`, `"depth": <ціле > 0`, `"alphaBeta": true|false }` (або `alpha_beta` замість `alphaBeta`). Для `minimax` обов’язкові `depth` і `alphaBeta`. У Prolog CLI `depth` має бути **цілим** (`integer`), без дробів і без рядків.
+- **`meta`:** `{ "strategy": string, "reason": string, "depthRequested": number, "depthUsed": number, "nodes": number, "cutoffs": number }` — для `greedy_safe` завжди `depthRequested: 1`, `depthUsed: 1`, `nodes: 0`, `cutoffs: 0`; для `minimax` — `depthRequested` = запитана глибина (півходи), `depthUsed` = фактична максимальна глибина пошуку за цей виклик (може бути меншою за запитану при ранньому закінченні гри), плюс лічильники `nodes` / `cutoffs`.
+
+**Помилки (Prolog, типові `message`):** `domain error: strategy` / `depth` / `alphaBeta`; `missing option: depth` / `alphaBeta`; `game over` / `no moves` — зазвичай `-32602`. Код **`-32603` + «Not initialized»** — лише якщо не викликано **init** (немає збереженого стану гри); помилкові параметри бота не мають маскуватися під це повідомлення (див. `write_exception/3` у `cli.pl`).
 
 Після **init** CLI зберігає стан у себе; подальші **applyMove** / **botMove** оновлюють цей стан. **possibleMoves** і **gameOver** лише читають поточний стан.
 

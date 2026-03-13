@@ -6,7 +6,7 @@
 
 | Каталог | Опис |
 |---------|------|
-| `src/prolog` | Рушій на Prolog |
+| `src/prolog` | Рушій на Prolog (ядро, евристичний бот `greedy_safe`, пошуковий MiniMax + α–β у `yermolovych_dab_search.pl`) |
 | `src/python` | Рушій на Python |
 | `src/java` | Рушій на Java |
 | `src/csharp` | Рушій на C# (Core + CLI для UI) |

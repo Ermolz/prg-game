@@ -1,3 +1,4 @@
+% Yermolovych Zakhar Maksymovych
 % yermolovych_dab_core.pl
 % Dots and Boxes: core game logic (state, moves, apply, game over).
 % Edges kept as ordset; no CLP(FD): grid size small, arithmetic sufficient.
@@ -23,45 +24,169 @@
     other_player/2
 ]).
 
-%% initial_state(++NX, ++NY, -State) is det.
-%  State = state(NX,NY,Edges,S1,S2,Player) with empty Edges, scores 0, Player 1.
-%  Modes: initial_state(++, ++, --).
+% ============================================================
+% initial_state/3
+% ============================================================
+
+% initial_state(++NX, ++NY, --State) is det.
+%
+% Призначення:
+%   Створює початковий стан гри для поля розміру NX x NY.
+%   У початковому стані:
+%     - множина ребер порожня;
+%     - рахунок обох гравців дорівнює 0;
+%     - першим ходить гравець 1.
+%
+% Мультипризначенність:
+%   1) initial_state(++NX, ++NY, --State)
+%      Основне змістовне призначення:
+%      за заданими розмірами поля побудувати початковий стан.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не призначений для генерації розмірів поля;
+%   - режим initial_state(++NX, ++NY, ++State) не є окремим
+%     змістовним використанням, а лише перевіркою точного терма.
 initial_state(NX, NY, state(NX, NY, [], 0, 0, 1)).
 
-%% valid_edge(++NX, ++NY, ++Edge, ++Edges) is semidet.
-%  Edge is a valid grid edge (both points in bounds, Manhattan 1); not in Edges.
-%  Modes: valid_edge(++, ++, ++, ++). (Edges for redundancy check; legal_move uses it.)
+% ============================================================
+% valid_edge/4
+% ============================================================
+
+% valid_edge(++NX, ++NY, ++Edge, ++Edges) is semidet.
+%
+% Призначення:
+%   Перевіряє, що Edge є коректним ребром сітки:
+%     - обидві точки належать межам поля;
+%     - точки мають мангеттенську відстань 1;
+%     - нормалізоване ребро ще відсутнє в Edges.
+%
+% Мультипризначенність:
+%   1) valid_edge(++NX, ++NY, ++Edge, ++Edges)
+%      Єдине змістовне призначення:
+%      перевірка коректності конкретного ребра.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує всі можливі ребра;
+%   - предикат не генерує множину вже проведених ребер.
 valid_edge(NX, NY, edge(P1, P2), Edges) :-
     point_in_bounds(P1, NX, NY),
     point_in_bounds(P2, NX, NY),
     manhattan_one(P1, P2),
     normalize_edge(edge(P1, P2), Norm),
     \+ ord_memberchk(Norm, Edges).
+    % ord_memberchk/2 перевіряє належність елемента впорядкованій множині.
 
+% ============================================================
+% manhattan_one/2
+% ============================================================
+
+% manhattan_one(++Point1, ++Point2) is semidet.
+%
+% Призначення:
+%   Перевіряє, що дві точки є сусідніми по горизонталі або вертикалі,
+%   тобто їх мангеттенська відстань дорівнює 1.
+%
+% Мультипризначенність:
+%   1) manhattan_one(++Point1, ++Point2)
+%      Єдине змістовне призначення:
+%      перевірка сусідності двох заданих точок.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує точки;
+%   - предикат не призначений для арифметичного відновлення координат.
 manhattan_one(point(X1, Y1), point(X2, Y2)) :-
     Dx is abs(X1 - X2),
     Dy is abs(Y1 - Y2),
     Dx + Dy =:= 1.
 
-%% legal_move(++State, ++Move, ++Edges) is semidet.
-%  Move is edge(P,Q); normalized Move not in State's Edges and valid.
-%  Modes: legal_move(++, ++, ++). (Third arg is State's edges for clarity in tests.)
+% ============================================================
+% legal_move/3
+% ============================================================
+
+% legal_move(++State, ++Move, ++Edges) is semidet.
+%
+% Призначення:
+%   Перевіряє, що Move є допустимим ходом у стані State:
+%     - Move нормалізується;
+%     - нормалізоване ребро ще не входить до Edges;
+%     - геометрія ребра коректна для поля.
+%
+%   Третій аргумент Edges подається явно для зручності тестування
+%   та прозорості інтерфейсу.
+%
+% Мультипризначенність:
+%   1) legal_move(++State, ++Move, ++Edges)
+%      Єдине змістовне призначення:
+%      перевірка конкретного ходу в конкретному стані.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує всі можливі ходи;
+%   - не призначений для відновлення стану за ходом.
 legal_move(state(NX, NY, Edges, _S1, _S2, _P), Move, Edges) :-
     normalize_edge(Move, Norm),
     \+ ord_memberchk(Norm, Edges),
     valid_edge_geometry(NX, NY, Norm).
 
+% ============================================================
+% valid_edge_geometry/3
+% ============================================================
+
+% valid_edge_geometry(++NX, ++NY, ++Edge) is semidet.
+%
+% Призначення:
+%   Перевіряє лише геометричну коректність ребра:
+%     - обидві точки лежать у межах поля;
+%     - точки сусідні по Манхеттену.
+%
+% Мультипризначенність:
+%   1) valid_edge_geometry(++NX, ++NY, ++Edge)
+%      Єдине змістовне призначення:
+%      перевірка геометрії конкретного ребра.
+%
+%   Інші змістовні призначення відсутні.
 valid_edge_geometry(NX, NY, edge(P1, P2)) :-
     point_in_bounds(P1, NX, NY),
     point_in_bounds(P2, NX, NY),
     manhattan_one(P1, P2).
 
-%% apply_move(++State, ++Move, -NewState, -ClosedBoxes, -ExtraTurn) is det.
-%  NewState has Move added to Edges; ClosedBoxes = list of box(X,Y) closed; ExtraTurn = true if any closed.
-%  Modes: apply_move(++, ++, --, --, --).
+% ============================================================
+% apply_move/5
+% ============================================================
+
+% apply_move(++State, ++Move, --NewState, --ClosedBoxes, --ExtraTurn) is det.
+%
+% Призначення:
+%   Застосовує хід Move до стану State та обчислює:
+%     - NewState    : новий стан гри;
+%     - ClosedBoxes : список клітинок, замкнених цим ходом;
+%     - ExtraTurn   : yes, якщо було замкнено хоча б одну клітинку,
+%                     і no в іншому випадку.
+%
+%   Якщо жодної клітинки не замкнено, хід переходить іншому гравцю.
+%   Якщо замкнено одну або більше клітинок, поточний гравець
+%   отримує очки та ходить ще раз.
+%
+%   Передумова: Move має бути допустимим для State (наприклад, перевірено через legal_move/3
+%   або взятий з possible_moves/2). Сам apply_move/5 не перевіряє легальність: він лише
+%   нормалізує ребро й додає його до ordset — подвійне ребро або несумісна геометрія
+%   не відсіюються як «нелегальний хід» у цьому предикаті.
+%
+% Мультипризначенність:
+%   1) apply_move(++State, ++Move, --NewState, --ClosedBoxes, --ExtraTurn)
+%      Основне змістовне призначення:
+%      виконати конкретний хід та отримати всі його наслідки.
+%
+%   Частково змістовним також є режим:
+%   2) apply_move(++State, ++Move, ++NewState, --ClosedBoxes, --ExtraTurn)
+%      як перевірка наперед відомого NewState.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує ходи;
+%   - не призначений для відновлення попереднього стану.
 apply_move(state(NX, NY, Edges, S1, S2, Player), Move, NewState, ClosedBoxes, ExtraTurn) :-
     normalize_edge(Move, Norm),
     ord_add_element(Edges, Norm, Edges1),
+    % ord_add_element/3 додає елемент до впорядкованої множини.
     completed_boxes_by_edge(state(NX, NY, Edges1, _S1, _S2, _P), Norm, ClosedBoxes),
     length(ClosedBoxes, N),
     (   N =:= 0
@@ -73,37 +198,135 @@ apply_move(state(NX, NY, Edges, S1, S2, Player), Move, NewState, ClosedBoxes, Ex
         ExtraTurn = yes
     ).
 
-add_scores(1, N, S1, S2, NS1, NS2) :- NS1 is S1 + N, NS2 = S2.
-add_scores(2, N, S1, S2, NS1, NS2) :- NS2 is S2 + N, NS1 = S1.
+% ============================================================
+% add_scores/6
+% ============================================================
 
-%% completed_boxes_by_edge(++State, ++Edge, -Boxes) is det.
-%  Boxes = list of box(X,Y) closed by adding Edge (0, 1, or 2 boxes). Incremental: only 0..2 adjacent boxes checked.
-%  Modes: completed_boxes_by_edge(++, ++, --).
+% add_scores(++Player, ++N, ++S1, ++S2, --NS1, --NS2) is det.
+%
+% Призначення:
+%   Додає N очок до рахунку того гравця, який виконав хід.
+%
+% Мультипризначенність:
+%   1) add_scores(++Player, ++N, ++S1, ++S2, --NS1, --NS2)
+%      Єдине змістовне призначення:
+%      обчислити нові рахунки за відомим номером гравця.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує Player;
+%   - не використовується для зворотного обчислення N або старих рахунків.
+add_scores(1, N, S1, S2, NS1, NS2) :-
+    NS1 is S1 + N,
+    NS2 = S2.
+
+add_scores(2, N, S1, S2, NS1, NS2) :-
+    NS2 is S2 + N,
+    NS1 = S1.
+
+% ============================================================
+% completed_boxes_by_edge/3
+% ============================================================
+
+% completed_boxes_by_edge(++State, ++Edge, --Boxes) is det.
+%
+% Призначення:
+%   Повертає список клітинок Boxes, які стають замкненими
+%   після додавання ребра Edge.
+%
+%   Перевіряються лише клітинки, суміжні з цим ребром,
+%   тому аналіз є локальним і охоплює 0, 1 або 2 клітинки.
+%
+% Мультипризначенність:
+%   1) completed_boxes_by_edge(++State, ++Edge, --Boxes)
+%      Єдине змістовне призначення:
+%      знайти всі клітинки, замкнені конкретним ребром.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує ребра;
+%   - не відновлює стан за списком клітинок.
 completed_boxes_by_edge(State, Edge, Boxes) :-
     State = state(NX, NY, Edges, _S1, _S2, _P),
     ord_add_element(Edges, Edge, EdgesWith),
-    findall(B, (adjacent_box_for_edge(NX, NY, Edge, B), box_closed(EdgesWith, B)), Boxes).
+    findall(
+        B,
+        (   adjacent_box_for_edge(NX, NY, Edge, B),
+            box_closed(EdgesWith, B)
+        ),
+        Boxes
+    ).
+    % findall/3 збирає всі знайдені значення у список.
 
-%% adjacent_box_for_edge(++NX, ++NY, ++Edge, -Box) is multi.
-%  Box = box(X,Y) top-left of grid box adjacent to Edge (0, 1 or 2 boxes). Horizontal edge: boxes (minX, minY-1), (minX, minY). Vertical: (minX-1, minY), (minX, minY).
-%  Modes: adjacent_box_for_edge(++, ++, ++, --).
+% ============================================================
+% adjacent_box_for_edge/4
+% ============================================================
+
+% adjacent_box_for_edge(++NX, ++NY, ++Edge, --Box) is multi.
+%
+% Призначення:
+%   Породжує кожну клітинку Box = box(X, Y), суміжну з ребром Edge.
+%   Координати box(X, Y) — це координати верхнього лівого кута клітинки.
+%
+%   Для горизонтального ребра можливі клітинки:
+%     - box(MinX, MinY)
+%     - box(MinX, MinY - 1)
+%
+%   Для вертикального ребра можливі клітинки:
+%     - box(MinX, MinY)
+%     - box(MinX - 1, MinY)
+%
+%   Породжуються лише ті клітинки, які дійсно лежать у межах поля.
+%
+% Мультипризначенність:
+%   1) adjacent_box_for_edge(++NX, ++NY, ++Edge, --Box)
+%      Основне змістовне призначення:
+%      згенерувати всі суміжні з ребром клітинки.
+%
+%   Частково змістовним є також режим:
+%   2) adjacent_box_for_edge(++NX, ++NY, ++Edge, +Box)
+%      як перевірка, чи є конкретна клітинка суміжною з ребром.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує Edge за Box.
 adjacent_box_for_edge(NX, NY, edge(point(Ax, Ay), point(Bx, By)), box(X, Y)) :-
     MinX is min(Ax, Bx),
     MinY is min(Ay, By),
     (   Ay =:= By
-    ->  (   Y = MinY ; Y is MinY - 1 ),
+    ->  (   Y = MinY
+        ;   Y is MinY - 1
+        ),
         X = MinX,
         Y >= 0, Y < NY,
         X >= 0, X < NX
     ;   Ax =:= Bx
-    ->  (   X = MinX ; X is MinX - 1 ),
+    ->  (   X = MinX
+        ;   X is MinX - 1
+        ),
         Y = MinY,
         X >= 0, X < NX,
         Y >= 0, Y < NY
     ).
 
-%% box_edges(++X, ++Y, -EdgeList) is det.
-%  EdgeList = ordset (sorted) of 4 normalized edges of box(X,Y).
+% ============================================================
+% box_edges/3
+% ============================================================
+
+% box_edges(++X, ++Y, --EdgeList) is det.
+%
+% Призначення:
+%   Для клітинки box(X, Y) будує список із чотирьох її ребер.
+%   Список повертається як впорядкована множина нормалізованих ребер.
+%
+% Мультипризначенність:
+%   1) box_edges(++X, ++Y, --EdgeList)
+%      Основне змістовне призначення:
+%      отримати всі ребра конкретної клітинки.
+%
+%   Частково змістовним є також режим:
+%   2) box_edges(++X, ++Y, +EdgeList)
+%      як перевірка правильності наперед відомого списку ребер.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує координати клітинки за списком ребер.
 box_edges(X, Y, BEdgesOrd) :-
     X1 is X + 1,
     Y1 is Y + 1,
@@ -115,46 +338,121 @@ box_edges(X, Y, BEdgesOrd) :-
     normalize_edge(edge(P00, P01), E2),
     normalize_edge(edge(P10, P11), E3),
     normalize_edge(edge(P01, P11), E4),
-    sort([E1,E2,E3,E4], BEdgesOrd).
+    sort([E1, E2, E3, E4], BEdgesOrd).
+    % sort/2 тут використовується для побудови впорядкованої множини.
 
-%% box_closed(++Edges, ++Box) is semidet.
-%  All four edges of Box are in Edges. Modes: box_closed(++, ++).
+% ============================================================
+% box_closed/2
+% ============================================================
+
+% box_closed(++Edges, ++Box) is semidet.
+%
+% Призначення:
+%   Перевіряє, що всі чотири ребра клітинки Box входять до Edges.
+%
+% Мультипризначенність:
+%   1) box_closed(++Edges, ++Box)
+%      Єдине змістовне призначення:
+%      перевірка, чи є конкретна клітинка замкненою.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує всі замкнені клітинки;
+%   - не відновлює множину Edges за клітинкою.
 box_closed(Edges, box(X, Y)) :-
     box_edges(X, Y, BEdgesOrd),
     ord_subset(BEdgesOrd, Edges).
+    % ord_subset/2 перевіряє, чи є одна впорядкована множина підмножиною іншої.
 
-%% possible_moves(++State, -Moves) is det.
-%  Moves = list of all legal (normalized) edges not yet in State. Sorted for determinism.
-%  Modes: possible_moves(++, --).
+% ============================================================
+% possible_moves/2
+% ============================================================
+
+% possible_moves(++State, --Moves) is det.
+%
+% Призначення:
+%   Повертає список усіх допустимих ходів у стані State.
+%   Кожний хід є нормалізованим ребром, яке ще не проведено.
+%   Результат відсортований для детермінованості.
+%
+% Мультипризначенність:
+%   1) possible_moves(++State, --Moves)
+%      Основне змістовне призначення:
+%      побудувати повний список можливих ходів.
+%
+%   Частково змістовним є також режим:
+%   2) possible_moves(++State, +Moves)
+%      як перевірка наперед відомого списку ходів.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує стани гри.
 possible_moves(State, Moves) :-
     State = state(NX, NY, Edges, _S1, _S2, _P),
-    total_edges(NX, NY, _),
-    findall(E, (grid_edge(NX, NY, E), \+ ord_memberchk(E, Edges)), Raw),
+    findall(
+        E,
+        (   grid_edge(NX, NY, E),
+            \+ ord_memberchk(E, Edges)
+        ),
+        Raw
+    ),
     sort(Raw, Moves).
 
+% ============================================================
+% grid_edge/3
+% ============================================================
+
+% grid_edge(++NX, ++NY, -Edge) is multi.
+%
+% Призначення:
+%   Породжує кожне ребро сітки для поля NX x NY:
+%     - спочатку горизонтальні,
+%     - потім вертикальні.
+%
+%   Ребро повертається у нормалізованому вигляді.
+%
+% Мультипризначенність:
+%   1) grid_edge(++NX, ++NY, --Edge)
+%      Основне змістовне призначення:
+%      генерація всіх ребер сітки.
+%
+%   Частково змістовним є також режим:
+%   2) grid_edge(++NX, ++NY, +Edge)
+%      як перевірка належності конкретного ребра сітці.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує NX, NY за ребром.
 grid_edge(NX, NY, E) :-
     NX0 is NX - 1,
     NY0 is NY - 1,
-    (   between(0, NX0, X), between(0, NY, Y),
+    (   between(0, NX0, X),
+        between(0, NY, Y),
         X1 is X + 1,
-        P1 = point(X, Y), P2 = point(X1, Y),
+        P1 = point(X, Y),
+        P2 = point(X1, Y),
         normalize_edge(edge(P1, P2), E)
-    ;   between(0, NX, X), between(0, NY0, Y),
+    ;   between(0, NX, X),
+        between(0, NY0, Y),
         Y1 is Y + 1,
-        P1 = point(X, Y), P2 = point(X, Y1),
+        P1 = point(X, Y),
+        P2 = point(X, Y1),
         normalize_edge(edge(P1, P2), E)
     ).
 
-%% game_over(++State) is semidet.
-%  All edges are filled. Modes: game_over(++).
+% ============================================================
+% game_over/1
+% ============================================================
+
+% game_over(++State) is semidet.
+%
+% Призначення:
+%   Істинний тоді і тільки тоді, коли всі ребра поля вже заповнені.
+%
+% Мультипризначенність:
+%   1) game_over(++State)
+%      Єдине змістовне призначення:
+%      перевірка завершеності конкретного стану гри.
+%
+%   Інші змістовні призначення відсутні:
+%   - предикат не генерує завершені стани.
 game_over(state(NX, NY, Edges, _S1, _S2, _P)) :-
     total_edges(NX, NY, Total),
     length(Edges, Total).
-
-/** <examples>
-% 2x2 grid: total 12 edges
-% ?- initial_state(2,2,S), possible_moves(S,M), length(M,L).  % L=12
-% Close 1 box on 1x1: 4 edges close the single box, extra turn
-% ?- initial_state(1,1,S), apply_move(S, edge(point(0,0),point(1,0)), S1, B, E).  % B=[], E=no (need 3 more)
-% game_over when all edges present
-*/

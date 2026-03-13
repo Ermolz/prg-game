@@ -160,6 +160,15 @@ async function main() {
     if (!botRes.reason || typeof botRes.reason !== 'string') {
       throw new Error('botMove: expected reason string');
     }
+    if (!botRes.meta || typeof botRes.meta !== 'object') {
+      throw new Error('botMove: expected meta object (Prolog unified bot_meta)');
+    }
+    if (typeof botRes.meta.depthRequested !== 'number' || typeof botRes.meta.depthUsed !== 'number') {
+      throw new Error('botMove: expected meta.depthRequested and meta.depthUsed as numbers');
+    }
+    if (typeof botRes.meta.nodes !== 'number') {
+      throw new Error('botMove: expected meta.nodes as number');
+    }
 
     // --- gameOver ---
     const goRes = await rpc(cli, 'gameOver', {});
